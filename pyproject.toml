@@ -1,0 +1,29 @@
+[project]
+name = "invoice-check"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.162.5",
+    "invoice2data>=1.0.1",
+    "jinja2>=3.1.6",
+    "pdfminer-six>=20260107",
+    "pgserver>=0.1.4",
+    "psycopg[binary]>=3.3.9",
+    "pydantic>=2.14.3",
+    "python-multipart>=0.0.33",
+    "reportlab>=5.1.0",
+    "sqlalchemy>=2.1.8",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pillow>=13.0.0",
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]
