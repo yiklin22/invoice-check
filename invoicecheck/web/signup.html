@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Create an account - Invoice check{% endblock %}
+{% block main %}
+<form class="card stack" method="post" action="/signup">
+  <h1>Create an account</h1>
+  <p class="hint">Each account has its own invoices and purchase orders. Nobody else can see them, and you can delete them at any time.</p>
+  <label>Your name <input name="name" value="{{ name }}" maxlength="80" autocomplete="name" required autofocus></label>
+  <label>Email <input type="email" name="email" value="{{ email }}" maxlength="254" autocomplete="username" required></label>
+  <label>Password <input type="password" name="password" minlength="{{ min_password }}" maxlength="200" autocomplete="new-password" required></label>
+  <p class="hint">At least {{ min_password }} characters. Your name is shown beside the decisions and corrections you make.</p>
+  {% if invite_needed %}<label>Invite code <input name="invite" autocomplete="off" required></label>{% endif %}
+  <button class="primary">Create account</button>
+  <p class="hint">Already have one? <a href="/login">Log in</a>.</p>
+</form>
+{% endblock %}

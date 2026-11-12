@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Log in - Invoice check{% endblock %}
+{% block main %}
+<form class="card stack" method="post" action="/login">
+  <h1>Log in</h1>
+  <input type="hidden" name="next" value="{{ next }}">
+  <label>Email <input type="email" name="email" value="{{ email }}" autocomplete="username" required autofocus></label>
+  <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+  <button class="primary">Log in</button>
+  <p class="hint">No account yet? <a href="/signup">Create one</a>.</p>
+</form>
+{% endblock %}

@@ -27,10 +27,52 @@ class Base(DeclarativeBase):
     pass
 
 
+class Account(Base):
+    """One login, and the owner of everything else. Every invoice, order and
+    upload belongs to exactly one account and is deleted with it."""
+    __tablename__ = "accounts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    name: Mapped[str] = mapped_column(String(80))
+    password_hash: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class LoginSession(Base):
+    """A browser session. Only the SHA-256 of the cookie value is stored."""
+    __tablename__ = "login_sessions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class LoginFailure(Base):
+    """A failed login, kept for the throttling window. `key` is "email:..." or "ip:..."."""
+    __tablename__ = "login_failures"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(300), index=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
+class UsageCounter(Base):
+    """How much of a daily allowance an account has used. Not reduced by deleting data."""
+    __tablename__ = "usage_counters"
+    __table_args__ = (UniqueConstraint("account_id", "day", "kind"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date)
+    kind: Mapped[str] = mapped_column(String(30))
+    count: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class PurchaseOrder(Base):
     __tablename__ = "purchase_orders"
+    __table_args__ = (UniqueConstraint("account_id", "po_number"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    po_number: Mapped[str] = mapped_column(String(64), unique=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    po_number: Mapped[str] = mapped_column(String(64))
     supplier_name: Mapped[str] = mapped_column(String(200))
     lines: Mapped[list[PurchaseOrderLine]] = relationship(
         back_populates="po", cascade="all, delete-orphan", order_by="PurchaseOrderLine.line_no")
@@ -50,11 +92,13 @@ class PurchaseOrderLine(Base):
 
 
 class Invoice(Base):
-    """One uploaded file. The SHA-256 of the bytes is unique, so the same
-    file uploaded twice is one record."""
+    """One uploaded file. The SHA-256 of the bytes is unique within an
+    account, so the same file uploaded twice is one record."""
     __tablename__ = "invoices"
+    __table_args__ = (UniqueConstraint("account_id", "sha256"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    sha256: Mapped[str] = mapped_column(String(64))
     filename: Mapped[str] = mapped_column(String(300))
     pdf: Mapped[bytes] = mapped_column(LargeBinary)
     size_bytes: Mapped[int] = mapped_column(Integer)
@@ -153,6 +197,7 @@ class ReviewDecision(Base):
 class UploadBatch(Base):
     __tablename__ = "upload_batches"
     id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     items: Mapped[list[UploadItem]] = relationship(
         back_populates="batch", cascade="all, delete-orphan", order_by="UploadItem.id")

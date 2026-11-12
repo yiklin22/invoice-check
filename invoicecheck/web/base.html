@@ -9,18 +9,20 @@
 <body>
 <header class="top">
   <a class="brand" href="/">Invoice check</a>
+  {% if account %}
   <nav>
     <a href="/">Invoices</a>
     <a href="/orders">Purchase orders</a>
     <a href="/export/discrepancies.csv">Export discrepancies</a>
     <a href="/export/invoices.csv">Export invoices</a>
   </nav>
-  <form method="post" action="/reviewer" class="who">
-    <label for="who">Reviewer</label>
-    <input id="who" name="name" value="{{ reviewer }}" maxlength="80" required>
-    <input type="hidden" name="next" value="{{ request.url.path }}">
-    <button>Set</button>
+  <form method="post" action="/logout" class="who">
+    <a href="/account">{{ account.name }}</a>
+    <button>Log out</button>
   </form>
+  {% else %}
+  <nav><a href="/login">Log in</a> <a href="/signup">Create an account</a></nav>
+  {% endif %}
 </header>
 <main>
 {% if flash %}<p class="flash {{ flash_kind }}" role="status">{{ flash }}</p>{% endif %}

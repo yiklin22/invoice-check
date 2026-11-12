@@ -43,6 +43,6 @@
 </table>
 </div>
 {% else %}
-<p class="empty">No invoices{{ " with this status" if current }} yet. Import your purchase orders, then upload invoice PDFs.</p>
+<p class="empty">No invoices{{ " with this status" if current }} yet. Import your purchase orders, then upload invoice PDFs{% if not current %}, or load the sample data from <a href="/account">your account page</a>{% endif %}.</p>
 {% endif %}
 {% endblock %}

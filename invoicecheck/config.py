@@ -1,6 +1,32 @@
-"""Settings. One business, one currency."""
+"""Settings. One business per account, one currency. Every limit can be set
+with an environment variable of the same name prefixed INVOICECHECK_."""
 import os
 
+
+def _int(name: str, default: int) -> int:
+    return int(os.environ.get(f"INVOICECHECK_{name}", default))
+
+
 CURRENCY = os.environ.get("INVOICECHECK_CURRENCY", "AUD")
-MAX_UPLOAD_BYTES = int(os.environ.get("INVOICECHECK_MAX_UPLOAD_BYTES", 5_000_000))
-MAX_FILES_PER_UPLOAD = int(os.environ.get("INVOICECHECK_MAX_FILES", 50))
+
+# Upload limits
+MAX_UPLOAD_BYTES = _int("MAX_UPLOAD_BYTES", 5_000_000)          # one PDF
+MAX_FILES_PER_UPLOAD = _int("MAX_FILES", 50)                    # one upload
+MAX_REQUEST_BYTES = _int("MAX_REQUEST_BYTES", 30_000_000)       # one HTTP request, checked before the body is read
+MAX_ORDER_FILE_BYTES = _int("MAX_ORDER_FILE_BYTES", 1_000_000)  # the purchase-order CSV
+
+# Usage caps, per account
+MAX_INVOICES = _int("MAX_INVOICES", 200)                        # files stored at one time
+MAX_STORAGE_BYTES = _int("MAX_STORAGE_BYTES", 100_000_000)      # PDF bytes stored at one time
+MAX_FILES_PER_DAY = _int("MAX_FILES_PER_DAY", 100)              # new files accepted per UTC day
+MAX_ORDER_LINES = _int("MAX_ORDER_LINES", 5_000)                # purchase-order lines stored at one time
+
+# Accounts
+MAX_ACCOUNTS = _int("MAX_ACCOUNTS", 25)
+INVITE_CODE = os.environ.get("INVOICECHECK_INVITE_CODE", "")    # when set, signing up needs it
+SESSION_DAYS = _int("SESSION_DAYS", 14)
+COOKIE_SECURE = os.environ.get("INVOICECHECK_COOKIE_SECURE", "") == "1"   # https requests always get a Secure cookie
+MIN_PASSWORD_CHARS = 10
+LOGIN_WINDOW_MINUTES = 15
+MAX_LOGIN_FAILURES_PER_EMAIL = 5
+MAX_LOGIN_FAILURES_PER_IP = 30

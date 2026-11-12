@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Account - Invoice check{% endblock %}
+{% block main %}
+<h1>Account</h1>
+<p class="hint">{{ account.name }} &middot; {{ account.email }}</p>
+
+<h2>Usage and limits</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>What</th><th class="num">Used</th><th class="num">Limit</th></tr></thead>
+  <tbody>
+    <tr><td>Invoice files stored</td><td class="num">{{ usage.invoices }}</td><td class="num">{{ usage.max_invoices }}</td></tr>
+    <tr><td>Storage</td><td class="num">{{ "%.1f"|format(usage.storage_bytes / 1000000) }} MB</td><td class="num">{{ usage.max_storage_bytes // 1000000 }} MB</td></tr>
+    <tr><td>New files today (UTC)</td><td class="num">{{ usage.files_today }}</td><td class="num">{{ usage.max_files_per_day }}</td></tr>
+    <tr><td>Purchase-order lines</td><td class="num">{{ usage.order_lines }}</td><td class="num">{{ usage.max_order_lines }}</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="hint">One file can be up to {{ max_mb }} MB, and one upload up to {{ max_files }} files. Deleting files frees storage; it does not give back today's allowance.</p>
+
+<section class="cards">
+  {% if sample %}
+  <form class="card" method="post" action="/account/sample">
+    <h2>Sample data</h2>
+    <p class="hint">Adds 13 invented purchase orders and 20 invented invoices to this account only, each with a known problem to find. Files you already have are not added twice.</p>
+    <button>Load the sample data</button>
+  </form>
+  {% endif %}
+  <form class="card" method="post" action="/account/delete-data" onsubmit="return confirm('Delete every invoice and purchase order in this account? This cannot be undone.');">
+    <h2>Delete all data</h2>
+    <p class="hint">Removes every invoice file, everything read from them, every decision, and all purchase orders. Your login stays.</p>
+    <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="danger">Delete all my data</button>
+  </form>
+  <form class="card" method="post" action="/account/delete" onsubmit="return confirm('Delete this account and everything in it? This cannot be undone.');">
+    <h2>Delete account</h2>
+    <p class="hint">Removes the account, its logins and all of its data.</p>
+    <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="danger">Delete my account</button>
+  </form>
+</section>
+{% endblock %}

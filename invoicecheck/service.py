@@ -1,41 +1,75 @@
 """Use cases: import orders, take uploads, process, review, export.
 
-Every function takes a Session and commits its own work. Matching is
-recomputed for all invoices after any change, because one invoice can
-change another's result (cumulative quantities, duplicates).
+Every function takes a Session and commits its own work. Everything except
+`process_queued` also takes the account it acts for, and never reads or
+writes another account's rows. Matching is recomputed for all of an
+account's invoices after any change, because one invoice can change
+another's result (cumulative quantities, duplicates).
 """
 from __future__ import annotations
 
 import csv
 import hashlib
 import io
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
-from sqlalchemy import select, text
+from sqlalchemy import delete, func, select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, selectinload
 
 from . import config
 from .extraction import extract_invoice, parse_decimal
 from .matching import REQUIRED, match_all
 from .models import (ACCEPTED, APPROVED, CLEAN, DISPUTED, NEEDS_REVIEW, OPEN, QUEUED, REJECTED,
-                     UNREADABLE, Discrepancy, Evidence, Invoice, InvoiceLine, PurchaseOrder,
-                     PurchaseOrderLine, ReviewDecision, UploadBatch, UploadItem)
+                     UNREADABLE, Account, Discrepancy, Evidence, Invoice, InvoiceLine, PurchaseOrder,
+                     PurchaseOrderLine, ReviewDecision, UploadBatch, UploadItem, UsageCounter)
 from .schemas import PO, ExtractedLine, Finding, MatchInvoice, POLine
 
 PO_COLUMNS = ["po_number", "supplier", "line_no", "sku", "description", "quantity", "unit_price"]
 HEADER_FIELDS = ["supplier_name", "invoice_number", "invoice_date", "po_number", "subtotal", "tax", "total"]
 LINE_FIELDS = ["sku", "description", "quantity", "unit_price", "line_total"]
-MATCH_LOCK = 4_815_162_342
+MATCH_LOCK = 48_151          # first key of the advisory lock; the second is the account id
+SAMPLE_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 class ReviewError(ValueError):
     """The request is not allowed in the invoice's current state, or is invalid."""
 
 
+# --- usage -------------------------------------------------------------------
+
+def _today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def _used_today(session: Session, account_id: int, kind: str) -> int:
+    return session.scalar(select(UsageCounter.count).where(
+        UsageCounter.account_id == account_id, UsageCounter.day == _today(), UsageCounter.kind == kind)) or 0
+
+
+def _add_usage(session: Session, account_id: int, kind: str, n: int) -> None:
+    stmt = pg_insert(UsageCounter).values(account_id=account_id, day=_today(), kind=kind, count=n)
+    session.execute(stmt.on_conflict_do_update(
+        index_elements=["account_id", "day", "kind"], set_={"count": UsageCounter.count + n}))
+
+
+def usage(session: Session, account_id: int) -> dict:
+    """What the account holds and has used, next to each cap."""
+    files, stored = session.execute(select(func.count(), func.coalesce(func.sum(Invoice.size_bytes), 0))
+                                    .where(Invoice.account_id == account_id)).one()
+    order_lines = session.scalar(select(func.count()).select_from(PurchaseOrderLine).join(PurchaseOrder)
+                                 .where(PurchaseOrder.account_id == account_id)) or 0
+    return {"invoices": files, "max_invoices": config.MAX_INVOICES,
+            "storage_bytes": int(stored), "max_storage_bytes": config.MAX_STORAGE_BYTES,
+            "files_today": _used_today(session, account_id, "files"), "max_files_per_day": config.MAX_FILES_PER_DAY,
+            "order_lines": order_lines, "max_order_lines": config.MAX_ORDER_LINES}
+
+
 # --- purchase orders ---------------------------------------------------------
 
-def import_purchase_orders(session: Session, text: str) -> dict:
+def import_purchase_orders(session: Session, account_id: int, text: str) -> dict:
     """Load a purchase-order CSV. All rows are checked first; one bad row
     rejects the whole file so a half-loaded order list cannot exist."""
     reader = csv.DictReader(io.StringIO(text))
@@ -70,12 +104,13 @@ def import_purchase_orders(session: Session, text: str) -> dict:
         return {"ok": False, "errors": errors, "orders": 0, "lines": 0}
 
     existing = {p.po_number: p for p in session.scalars(
-        select(PurchaseOrder).options(selectinload(PurchaseOrder.lines)))}
+        select(PurchaseOrder).where(PurchaseOrder.account_id == account_id)
+        .options(selectinload(PurchaseOrder.lines)))}
     count = 0
     for number, entry in parsed.items():
         po = existing.get(number)
         if po is None:
-            po = PurchaseOrder(po_number=number, supplier_name=entry["supplier"])
+            po = PurchaseOrder(account_id=account_id, po_number=number, supplier_name=entry["supplier"])
             session.add(po)
         po.supplier_name = entry["supplier"]
         current = {ln.line_no: ln for ln in po.lines}
@@ -90,13 +125,19 @@ def import_purchase_orders(session: Session, text: str) -> dict:
             ln.sku, ln.description, ln.quantity, ln.unit_price = sku, desc, qty, price
             count += 1
     session.flush()
-    rematch_all(session)
+    held = usage(session, account_id)["order_lines"]
+    if held > config.MAX_ORDER_LINES:
+        session.rollback()
+        return {"ok": False, "orders": 0, "lines": 0, "errors": [
+            f"That would make {held:,} order lines; the limit for an account is {config.MAX_ORDER_LINES:,}."]}
+    rematch_all(session, account_id)
     session.commit()
     return {"ok": True, "errors": [], "orders": len(parsed), "lines": count}
 
 
-def load_pos(session: Session) -> dict[str, PO]:
-    rows = session.scalars(select(PurchaseOrder).options(selectinload(PurchaseOrder.lines)))
+def load_pos(session: Session, account_id: int) -> dict[str, PO]:
+    rows = session.scalars(select(PurchaseOrder).where(PurchaseOrder.account_id == account_id)
+                           .options(selectinload(PurchaseOrder.lines)))
     return {p.po_number: PO(po_number=p.po_number, supplier_name=p.supplier_name, lines=tuple(
         POLine(line_no=ln.line_no, sku=ln.sku, description=ln.description,
                quantity=ln.quantity, unit_price=ln.unit_price) for ln in p.lines)) for p in rows}
@@ -104,10 +145,15 @@ def load_pos(session: Session) -> dict[str, PO]:
 
 # --- upload and processing ---------------------------------------------------
 
-def create_batch(session: Session, files: list[tuple[str, bytes]]) -> UploadBatch:
-    """Record uploaded files. A file whose bytes were seen before points at
-    the existing invoice; no second record is made."""
-    batch = UploadBatch()
+def create_batch(session: Session, account_id: int, files: list[tuple[str, bytes]]) -> UploadBatch:
+    """Record uploaded files. A file whose bytes this account uploaded before
+    points at the existing invoice; no second record is made. A file that
+    would take the account past a cap is refused with the reason."""
+    # One upload at a time per account, so two requests cannot both fit under a cap.
+    session.execute(select(Account.id).where(Account.id == account_id).with_for_update())
+    held = usage(session, account_id)
+    count, stored, today, accepted = held["invoices"], held["storage_bytes"], held["files_today"], 0
+    batch = UploadBatch(account_id=account_id)
     session.add(batch)
     for name, data in files[:config.MAX_FILES_PER_UPLOAD]:
         name = (name or "unnamed.pdf")[:300]
@@ -120,26 +166,56 @@ def create_batch(session: Session, files: list[tuple[str, bytes]]) -> UploadBatc
                 detail=f"Larger than the {config.MAX_UPLOAD_BYTES // 1_000_000} MB limit."))
             continue
         digest = hashlib.sha256(data).hexdigest()
-        invoice = session.scalar(select(Invoice).where(Invoice.sha256 == digest))
+        invoice = session.scalar(select(Invoice).where(Invoice.account_id == account_id,
+                                                       Invoice.sha256 == digest))
         if invoice is not None:
             batch.items.append(UploadItem(
                 filename=name, outcome="already_uploaded", invoice=invoice,
                 detail=f"Identical to {invoice.filename}, uploaded earlier."))
             continue
-        invoice = Invoice(sha256=digest, filename=name, pdf=data, size_bytes=len(data), status=QUEUED)
+        over = None
+        if count + accepted >= config.MAX_INVOICES:
+            over = f"The account already holds {config.MAX_INVOICES} files. Delete some to upload more."
+        elif stored + len(data) > config.MAX_STORAGE_BYTES:
+            over = f"The account's {config.MAX_STORAGE_BYTES // 1_000_000} MB of storage is full."
+        elif today + accepted >= config.MAX_FILES_PER_DAY:
+            over = f"The limit of {config.MAX_FILES_PER_DAY} new files a day has been reached. Try again tomorrow."
+        if over:
+            batch.items.append(UploadItem(filename=name, outcome="rejected_upload", detail=over))
+            continue
+        invoice = Invoice(account_id=account_id, sha256=digest, filename=name, pdf=data,
+                          size_bytes=len(data), status=QUEUED)
         session.add(invoice)
         session.flush()
+        accepted, stored = accepted + 1, stored + len(data)
         batch.items.append(UploadItem(filename=name, outcome="new", invoice=invoice))
     for name, _ in files[config.MAX_FILES_PER_UPLOAD:]:
         batch.items.append(UploadItem(
             filename=name[:300], outcome="rejected_upload",
             detail=f"More than {config.MAX_FILES_PER_UPLOAD} files in one upload."))
+    if accepted:
+        _add_usage(session, account_id, "files", accepted)
     session.commit()
     return batch
 
 
+def sample_available() -> bool:
+    return (SAMPLE_DIR / "purchase_orders.csv").is_file()
+
+
+def load_sample_data(session: Session, account_id: int) -> UploadBatch:
+    """Put the invented example orders and invoices into this account. They
+    count against the account's caps like any other upload."""
+    result = import_purchase_orders(session, account_id, (SAMPLE_DIR / "purchase_orders.csv").read_text())
+    if not result["ok"]:
+        raise ReviewError(result["errors"][0])
+    return create_batch(session, account_id, [(p.name, p.read_bytes())
+                                              for p in sorted((SAMPLE_DIR / "invoices").glob("*.pdf"))])
+
+
 def process_queued(session: Session) -> int:
-    """Read every queued file, then recompute matching."""
+    """Read every queued file, whichever account it belongs to, then
+    recompute matching for each account that had one."""
     queued = session.scalars(select(Invoice).where(Invoice.status == QUEUED).order_by(Invoice.id)
                              .with_for_update(skip_locked=True)).all()
     for inv in queued:
@@ -155,7 +231,8 @@ def process_queued(session: Session) -> int:
         inv.lines = [InvoiceLine(**ln.model_dump()) for ln in result.lines]
         inv.evidence = [Evidence(**ev.model_dump()) for ev in result.evidence]
     session.flush()
-    rematch_all(session)
+    for account_id in sorted({inv.account_id for inv in queued}):
+        rematch_all(session, account_id)
     session.commit()
     return len(queued)
 
@@ -195,14 +272,15 @@ def _evidence_findings(inv: Invoice) -> list[Finding]:
     return out
 
 
-def rematch_all(session: Session) -> None:
-    # One recomputation at a time across all processes; released at commit or rollback.
-    session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": MATCH_LOCK})
+def rematch_all(session: Session, account_id: int) -> None:
+    """Recompute the findings of every invoice in one account."""
+    # One recomputation at a time per account across all processes; released at commit or rollback.
+    session.execute(text("SELECT pg_advisory_xact_lock(:ns, :account)"), {"ns": MATCH_LOCK, "account": account_id})
     invoices = session.scalars(
-        select(Invoice).where(Invoice.status != QUEUED).order_by(Invoice.id)
+        select(Invoice).where(Invoice.account_id == account_id, Invoice.status != QUEUED).order_by(Invoice.id)
         .options(selectinload(Invoice.lines), selectinload(Invoice.discrepancies),
                  selectinload(Invoice.evidence))).all()
-    findings = match_all([_to_match(i) for i in invoices], load_pos(session))
+    findings = match_all([_to_match(i) for i in invoices], load_pos(session, account_id))
     for inv in invoices:
         new = {f.fingerprint: f for f in findings[inv.id] + _evidence_findings(inv)}
         old = {d.fingerprint: d for d in inv.discrepancies}
@@ -244,9 +322,10 @@ def _refresh_status(inv: Invoice, appeared: bool) -> None:
 
 # --- review -----------------------------------------------------------------
 
-def get_invoice(session: Session, invoice_id: int) -> Invoice:
+def get_invoice(session: Session, account_id: int, invoice_id: int) -> Invoice:
+    """An invoice of this account. Another account's invoice does not exist as far as the caller can tell."""
     inv = session.get(Invoice, invoice_id)
-    if inv is None:
+    if inv is None or inv.account_id != account_id:
         raise LookupError(f"No invoice {invoice_id}")
     return inv
 
@@ -278,13 +357,13 @@ def _same(a, b) -> bool:
     return a == b
 
 
-def apply_edit(session: Session, invoice_id: int, reviewer: str, header: dict[str, str],
+def apply_edit(session: Session, account_id: int, invoice_id: int, reviewer: str, header: dict[str, str],
                lines: list[dict[str, str]], note: str = "") -> int:
     """Apply a reviewer's corrections. Each changed value is logged with its
     old and new value, marked as manually entered, and matching is re-run.
     `lines` items carry `line_no` ('' for a new line) and may carry
     `delete`. Returns the number of values changed."""
-    inv = get_invoice(session, invoice_id)
+    inv = get_invoice(session, account_id, invoice_id)
     if inv.status == QUEUED:
         raise ReviewError("This file has not been processed yet.")
     method, changes = f"manual:{reviewer}", 0
@@ -341,14 +420,14 @@ def apply_edit(session: Session, invoice_id: int, reviewer: str, header: dict[st
         if inv.status in (APPROVED, REJECTED, CLEAN, UNREADABLE):
             inv.status = NEEDS_REVIEW
         session.flush()
-        rematch_all(session)
+        rematch_all(session, account_id)
     session.commit()
     return changes
 
 
-def decide_discrepancy(session: Session, invoice_id: int, fingerprint: str, action: str,
+def decide_discrepancy(session: Session, account_id: int, invoice_id: int, fingerprint: str, action: str,
                        reviewer: str, note: str = "") -> None:
-    inv = get_invoice(session, invoice_id)
+    inv = get_invoice(session, account_id, invoice_id)
     if action not in ("accept", "dispute", "reopen"):
         raise ReviewError(f"Unknown action {action!r}.")
     if inv.status != NEEDS_REVIEW:
@@ -364,8 +443,9 @@ def decide_discrepancy(session: Session, invoice_id: int, fingerprint: str, acti
     session.commit()
 
 
-def decide_invoice(session: Session, invoice_id: int, action: str, reviewer: str, note: str = "") -> None:
-    inv = get_invoice(session, invoice_id)
+def decide_invoice(session: Session, account_id: int, invoice_id: int, action: str, reviewer: str,
+                   note: str = "") -> None:
+    inv = get_invoice(session, account_id, invoice_id)
     if action == "approve":
         if inv.status not in (NEEDS_REVIEW, CLEAN):
             raise ReviewError(f"An invoice that is {inv.status} cannot be approved.")
@@ -388,16 +468,37 @@ def decide_invoice(session: Session, invoice_id: int, action: str, reviewer: str
     inv.decisions.append(ReviewDecision(action=f"{action}_invoice", note=note.strip() or None,
                                         reviewer=reviewer))
     session.flush()
-    rematch_all(session)
+    rematch_all(session, account_id)
     session.commit()
 
 
-def delete_invoice(session: Session, invoice_id: int) -> None:
+# --- deletion ---------------------------------------------------------------
+
+def delete_invoice(session: Session, account_id: int, invoice_id: int) -> None:
     """Remove a file and everything derived from it."""
-    session.delete(get_invoice(session, invoice_id))
+    session.delete(get_invoice(session, account_id, invoice_id))
     session.flush()
-    rematch_all(session)
+    rematch_all(session, account_id)
     session.commit()
+
+
+def delete_all_data(session: Session, account_id: int) -> dict:
+    """Remove every invoice, order and upload record of one account. The
+    account and its daily usage count stay. Rows that hang off these tables
+    go with them through ON DELETE CASCADE."""
+    removed = {}
+    for label, table in (("invoices", Invoice), ("orders", PurchaseOrder), ("uploads", UploadBatch)):
+        removed[label] = session.execute(delete(table).where(table.account_id == account_id)).rowcount
+    session.commit()
+    session.expire_all()
+    return removed
+
+
+def delete_account(session: Session, account_id: int) -> None:
+    """Remove the account, its logins and everything it owns."""
+    session.execute(delete(Account).where(Account.id == account_id))
+    session.commit()
+    session.expire_all()
 
 
 # --- export -----------------------------------------------------------------
@@ -406,13 +507,13 @@ def _latest_notes(inv: Invoice) -> dict[str, ReviewDecision]:
     return {d.fingerprint: d for d in inv.decisions if d.fingerprint}
 
 
-def export_discrepancies_csv(session: Session) -> str:
+def export_discrepancies_csv(session: Session, account_id: int) -> str:
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(["invoice_id", "file", "supplier", "invoice_number", "invoice_date", "po_number",
                 "invoice_total", "invoice_status", "code", "severity", "line_no", "message",
                 "expected", "actual", "impact", "decision", "decision_note", "decided_by"])
-    for inv in session.scalars(select(Invoice).order_by(Invoice.id)):
+    for inv in session.scalars(select(Invoice).where(Invoice.account_id == account_id).order_by(Invoice.id)):
         notes = _latest_notes(inv)
         for d in inv.discrepancies:
             last = notes.get(d.fingerprint)
@@ -424,13 +525,13 @@ def export_discrepancies_csv(session: Session) -> str:
     return out.getvalue()
 
 
-def export_invoices_csv(session: Session) -> str:
+def export_invoices_csv(session: Session, account_id: int) -> str:
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(["invoice_id", "file", "status", "supplier", "invoice_number", "invoice_date", "po_number",
                 "subtotal", "tax", "total", "currency", "discrepancies", "open_discrepancies",
                 "manually_edited", "unreadable_reason"])
-    for inv in session.scalars(select(Invoice).order_by(Invoice.id)):
+    for inv in session.scalars(select(Invoice).where(Invoice.account_id == account_id).order_by(Invoice.id)):
         w.writerow([inv.id, inv.filename, inv.status, inv.supplier_name, inv.invoice_number,
                     inv.invoice_date, inv.po_number, inv.subtotal, inv.tax, inv.total, inv.currency,
                     len(inv.discrepancies), sum(d.state == OPEN for d in inv.discrepancies),

@@ -2,17 +2,7 @@
 import csv
 import io
 
-import pytest
-from fastapi.testclient import TestClient
-
 from conftest import FIXTURES, fixture_files
-
-
-@pytest.fixture
-def client(session):
-    from invoicecheck.app import app
-    with TestClient(app) as c:
-        yield c
 
 
 def upload(client, names=None):
@@ -75,7 +65,6 @@ def test_unreadable_page_says_so_and_cannot_be_approved(client):
 def test_edit_decide_and_approve_through_forms(client):
     import_orders(client)
     upload(client, {"08_ambiguous_po_format.pdf", "11_price_above_po.pdf"})
-    client.post("/reviewer", data={"name": "Ana", "next": "/"})
     r = client.post("/invoices/1/edit", data={"po_number": "PO-1007", "note": "Confirmed with buyer"})
     assert "Saved 1 change(s)" in r.text and "typed by Ana" in r.text and "No discrepancies found." in r.text
     assert "Invoice approved." in client.post("/invoices/1/decision", data={"action": "approve"}).text
@@ -104,5 +93,4 @@ def test_delete_and_misc(client):
     assert "Deleted 01_clean_northwind.pdf" in client.post("/invoices/1/delete").text
     assert client.get("/invoices/1").status_code == 404
     assert client.get("/healthz").json() == {"ok": True}
-    assert client.post("/reviewer", data={"name": "x", "next": "//evil.example"}, follow_redirects=False).headers["location"] == "/"
     assert "No purchase orders loaded yet." in client.get("/orders").text

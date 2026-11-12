@@ -1,3 +1,4 @@
+without a login, the export answers: 303 -> /login?next=/export/invoices.csv
 orders import: ok
 upload 1: 20 files checked in 0.5s
 
@@ -25,3 +26,7 @@ file                                     status        findings
 
 re-upload of all 20 files: 20 recognised as already uploaded, 20 invoice records in total
 seeded cases surfaced as expected: 20/20
+
+second account: 0 rows in its exports; the first account's invoice, PDF and upload answer [404, 404, 404]; deleting that invoice answers 404
+a delete sent from another site answers 403; invoice records still held: 20
+both demo accounts deleted: [200, 200]; the old login now answers 303

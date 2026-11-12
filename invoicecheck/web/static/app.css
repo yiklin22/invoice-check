@@ -65,3 +65,8 @@ tr:last-child td { border-bottom:0; } .num { text-align:right; font-variant-nume
 table.lines input { width:100%; min-width:5rem; padding:.25rem .4rem; } table.lines input.n { min-width:4.5rem; text-align:right; }
 table.lines input[type=checkbox] { width:auto; min-width:0; } tr.new td { background:#fafbfc; color:var(--muted); }
 .log { list-style:none; padding:0; margin:0; font-size:.87rem; } .log li { padding:.3rem 0; border-bottom:1px solid var(--line); } .log time { color:var(--muted); margin-right:.4rem; }
+.who a { color:var(--ink); }
+.card.stack { max-width:26rem; margin:2rem auto; align-items:stretch; }
+.card.stack h1 { margin:0; }
+.card label { display:flex; flex-direction:column; gap:.2rem; font-size:.87rem; color:var(--muted); width:100%; max-width:22rem; }
+.card.stack label { max-width:none; }
