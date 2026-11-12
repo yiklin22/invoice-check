@@ -1,0 +1,20 @@
+issuer: Bluegum Cleaning Supplies
+keywords:
+  - Bluegum Cleaning Supplies
+fields:
+  invoice_number: INVOICE\s+(\S+)
+  date: Issued\s+(\d{1,2} \w+ \d{4})
+  amount: TOTAL DUE\s+\$([\d,]+\.\d{2})
+  issued_raw: Issued\s+(\d{1,2} \w+ \d{4})
+  po_number: Purchase order[ ]+([^\n]+)
+  subtotal_raw: Sub-total\s+(\$[\d,]+\.\d{2})
+  tax_raw: GST \(10%\)\s+(\$[\d,]+\.\d{2})
+  total_raw: TOTAL DUE\s+(\$[\d,]+\.\d{2})
+lines:
+  start: Item\s+Description
+  end: Sub-total
+  line: ^\s*(?P<sku>[A-Z0-9][A-Z0-9-]+)\s+(?P<name>.+?)\s+(?P<quantity>\d+)\s+(?P<price_unit>\$[\d,]+\.\d{2})\s+(?P<line_total>\$[\d,]+\.\d{2})\s*$
+options:
+  currency: AUD
+  date_formats:
+    - '%d %B %Y'

@@ -1,0 +1,20 @@
+issuer: Northwind Paper Co
+keywords:
+  - Northwind Paper Co
+fields:
+  invoice_number: Invoice No:\s+(\S+)
+  date: Invoice Date:\s+(\d{2}/\d{2}/\d{4})
+  amount: Total AUD\s+([\d,]+\.\d{2})
+  issued_raw: Invoice Date:\s+(\d{2}/\d{2}/\d{4})
+  po_number: PO Number:[ ]+([^\n]+)
+  subtotal_raw: Subtotal\s+([\d,]+\.\d{2})
+  tax_raw: GST 10%\s+([\d,]+\.\d{2})
+  total_raw: Total AUD\s+([\d,]+\.\d{2})
+lines:
+  start: SKU\s+Description
+  end: Subtotal
+  line: ^\s*(?P<sku>[A-Z0-9][A-Z0-9-]+)\s+(?P<name>.+?)\s+(?P<quantity>\d+)\s+(?P<price_unit>[\d,]+\.\d{2})\s+(?P<line_total>[\d,]+\.\d{2})\s*$
+options:
+  currency: AUD
+  date_formats:
+    - '%d/%m/%Y'
