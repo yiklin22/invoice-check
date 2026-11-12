@@ -1,0 +1,27 @@
+orders import: ok
+upload 1: 20 files checked in 0.5s
+
+file                                     status        findings
+01_clean_northwind.pdf                   clean         -                                             
+02_clean_kestrel.pdf                     clean         -                                             
+03_clean_bluegum.pdf                     clean         -                                             
+04_clean_northwind.pdf                   clean         -                                             
+05_clean_kestrel_part1.pdf               clean         -                                             
+06_clean_bluegum_two_pages.pdf           clean         -                                             
+07_clean_kestrel_part2.pdf               clean         -                                             
+08_ambiguous_po_format.pdf               needs_review  AMBIGUOUS_PO                                  
+09_duplicate_same_number.pdf             needs_review  DUPLICATE_INVOICE_NUMBER                      
+10_duplicate_rebilled.pdf                needs_review  POSSIBLE_DUPLICATE, QTY_EXCEEDS_PO            
+11_price_above_po.pdf                    needs_review  PRICE_MISMATCH                                
+12_price_below_po.pdf                    needs_review  PRICE_MISMATCH                                
+13_line_arithmetic.pdf                   needs_review  LINE_ARITHMETIC                               
+14_quantity_above_po.pdf                 needs_review  QTY_EXCEEDS_PO                                
+15_quantity_cumulative.pdf               needs_review  QTY_EXCEEDS_PO                                
+16_order_not_found.pdf                   needs_review  PO_NOT_FOUND                                  
+17_no_po_on_invoice.pdf                  needs_review  PO_MISSING                                    
+18_unreadable_scan.pdf                   unreadable    UNREADABLE                                    
+19_unreadable_truncated.pdf              unreadable    UNREADABLE                                    
+20_sku_not_ordered_total_wrong.pdf       needs_review  SKU_NOT_ON_PO, TOTAL_MISMATCH                 
+
+re-upload of all 20 files: 20 recognised as already uploaded, 20 invoice records in total
+seeded cases surfaced as expected: 20/20
