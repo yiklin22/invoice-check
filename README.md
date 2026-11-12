@@ -10,7 +10,9 @@ of scope.
 **Status: the seven build milestones are done and tested on synthetic data,
 and milestone 8 added login, per-account data, deletion, upload limits and
 usage caps. It runs on this machine only: it is not hosted anywhere, and no
-real invoice and no real user has touched it yet.** See
+real invoice and no real user has touched it yet. Milestone 9 added a model
+fallback for invoices no template reads; it is off by default and no real
+model call has been made.** See [The model step](#the-model-step) and
 [What this does not show](#what-this-does-not-show).
 
 ## Result on the fixture set
@@ -51,7 +53,7 @@ Needs [uv](https://docs.astral.sh/uv/). No database install is needed: without
 uv sync
 uv run uvicorn invoicecheck.app:app --port 8811      # open http://127.0.0.1:8811 and create an account
 uv run python scripts/demo.py http://127.0.0.1:8811  # in a second terminal: two throwaway accounts, deleted at the end
-uv run pytest                                        # 111 tests, on a real PostgreSQL
+uv run pytest                                        # 125 tests, on a real PostgreSQL
 ```
 
 To try it by hand, create an account and press **Load the sample data** on the
@@ -173,6 +175,43 @@ Things I had to work around:
 - It gives values but not positions, so evidence is located afterwards by
   searching the page text for the printed characters.
 
+## The model step
+
+**Not yet run against a real model.** The 14 tests in `tests/test_model.py`
+use a stand-in client that returns fixed output. The request has never been
+sent to the API, so its exact shape is unconfirmed until the pilot below runs.
+
+- **When it is used.** Only for a PDF that has text but that no supplier
+  template can read, and only with `INVOICECHECK_MODEL_EXTRACTION=1` and
+  `ANTHROPIC_API_KEY` in the server's environment. An invoice a template
+  reads never goes to the model. The call is made on the server.
+- **What the model may say.** Each header value and each line, copied as
+  printed (`claude-opus-5-5`, low effort, structured output). It is told not
+  to calculate or correct anything.
+- **What code checks.** Every value is looked up on the pages. A header value
+  that is not printed there is discarded and shows as a missing field. A line
+  whose values are not together on one printed row is kept and flagged, since
+  hiding a billed line would be worse. Amounts are parsed from the printed
+  characters into `Decimal`; dates are read day-first or not at all.
+- **Never clean on its own.** An invoice read by the model always carries a
+  "Read by a model" finding, so a person has to accept it before approval.
+- **When it fails.** A refusal, a timeout, an API error or a cut-off answer
+  leaves the file unreadable, with the reason. Calls are capped per account
+  per day (`MAX_MODEL_CALLS_PER_DAY`, 30); past the cap the file is
+  unreadable as before.
+- **What it costs.** Not measured. `scripts/model_pilot.py` reads six fixture
+  invoices with the model instead of the templates, prints tokens and
+  estimated dollars per call, and stops at a spend limit (default $0.50):
+
+  ```bash
+  echo 'ANTHROPIC_API_KEY=...' > .env               # .env is git-ignored
+  uv run --env-file .env python scripts/model_pilot.py
+  INVOICECHECK_MODEL_EXTRACTION=1 uv run --env-file .env uvicorn invoicecheck.app:app --port 8811
+  ```
+
+Invoice text is business data leaving the machine when this is on; whoever
+owns the invoices would need to agree to that.
+
 ## Dependencies checked before use
 
 Versions are pinned in `uv.lock`. Licenses are from each package's metadata.
@@ -189,13 +228,15 @@ Versions are pinned in `uv.lock`. Licenses are from each package's metadata.
 | invoice2data | 1.0.1 | MIT | template extraction |
 | pdfminer.six | 20260107 | MIT | page text |
 | pgserver | 0.1.4 | Apache-2.0 | bundled PostgreSQL for development and tests |
+| anthropic | 2.8.0 | Apache-2.0 | model fallback; installs and imports, no sample output until a key is available |
 | reportlab, pillow (dev) | 5.1.0 | BSD, MIT-CMU | generating the fixture PDFs |
 
 ## What this does not show
 
 - **Real documents.** Every invoice is synthetic, with a clean text layer and
-  a layout I chose. Real supplier invoices need a template each, and scans
-  need OCR or a model, neither of which is here.
+  a layout I chose. Real supplier invoices need a template each or the
+  model fallback, which has not run against a real model. Scans have no
+  text layer and stay unreadable: the fallback reads text, not images.
 - **Real users.** Nobody but me has used the screens. Correction counts and
   completion times do not exist yet.
 - **A hosted deployment.** Everything ran on one machine over plain HTTP.
@@ -244,9 +285,9 @@ address and the HTTPS scheme are the visitor's, not the proxy's.
 1. Put it on a host with HTTPS and an invite code. This needs a choice of
    host and a PostgreSQL there; nothing in the code depends on which.
 2. Password reset and email verification, which need a way to send email.
-3. Model extraction for files that no template reads, server-side, with the
-   same evidence rule: a value that cannot be found on the page is flagged.
-   Count model calls against a per-account daily cap like uploads.
+3. Run the model pilot with an API key, then try the fallback on real
+   invoices from a supplier that has no template. Scans would need the PDF
+   itself sent to the model, which is not built.
 4. Three operators completing a real task, measuring corrections and time.
 
 ## Layout
@@ -258,11 +299,13 @@ invoicecheck/
   config.py       limits and caps
   schemas.py      typed values passed between layers
   extraction.py   PDF -> fields + evidence, or "unreadable" with a reason
+  model.py        model fallback when no template matches; the only outbound call
   templates_i2d/  one invoice2data template per supplier
   matching.py     the rules; pure functions, no database
   service.py      import, upload, process, edit, decide, delete, export; all per account
   app.py, web/    FastAPI routes, pages, stylesheet
 fixtures/         generate.py, 20 PDFs, purchase_orders.csv, manifest.json
 scripts/demo.py   drives a running server through the whole flow with two accounts
-tests/            111 tests
+scripts/model_pilot.py   reads six fixtures with the real model; spends money, has a limit
+tests/            125 tests
 ```

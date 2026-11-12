@@ -19,7 +19,7 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, selectinload
 
-from . import config
+from . import config, model
 from .extraction import extract_invoice, parse_decimal
 from .matching import REQUIRED, match_all
 from .models import (ACCEPTED, APPROVED, CLEAN, DISPUTED, NEEDS_REVIEW, OPEN, QUEUED, REJECTED,
@@ -63,6 +63,8 @@ def usage(session: Session, account_id: int) -> dict:
                                  .where(PurchaseOrder.account_id == account_id)) or 0
     return {"invoices": files, "max_invoices": config.MAX_INVOICES,
             "storage_bytes": int(stored), "max_storage_bytes": config.MAX_STORAGE_BYTES,
+            "model_on": model.enabled(), "model_calls_today": _used_today(session, account_id, "model_calls"),
+            "max_model_calls_per_day": config.MAX_MODEL_CALLS_PER_DAY,
             "files_today": _used_today(session, account_id, "files"), "max_files_per_day": config.MAX_FILES_PER_DAY,
             "order_lines": order_lines, "max_order_lines": config.MAX_ORDER_LINES}
 
@@ -219,7 +221,12 @@ def process_queued(session: Session) -> int:
     queued = session.scalars(select(Invoice).where(Invoice.status == QUEUED).order_by(Invoice.id)
                              .with_for_update(skip_locked=True)).all()
     for inv in queued:
-        result = extract_invoice(inv.pdf)
+        reader = None
+        if model.enabled() and _used_today(session, inv.account_id, "model_calls") < config.MAX_MODEL_CALLS_PER_DAY:
+            def reader(pages, account_id=inv.account_id):
+                _add_usage(session, account_id, "model_calls", 1)   # counted before the call: a failed call can cost too
+                return model.ModelReader().read(pages)
+        result = extract_invoice(inv.pdf, model_reader=reader)
         inv.page_texts = list(result.page_texts)
         if not result.readable:
             inv.status, inv.unreadable_reason = UNREADABLE, result.reason
@@ -269,6 +276,10 @@ def _evidence_findings(inv: Invoice) -> list[Finding]:
             out.append(Finding(code="EVIDENCE_MISSING", severity="medium", line_no=line_no, key=fld,
                                message=f"The value of {fld if line_no is None else f'line {line_no}'} "
                                        f"could not be located on a page."))
+    if (inv.extraction_method or "").startswith("model:"):
+        out.append(Finding(code="MODEL_READ", severity="low", key="-",
+                           message="Read by a model, not by a supplier template. "
+                                   "Check every field against the document before accepting."))
     return out
 
 

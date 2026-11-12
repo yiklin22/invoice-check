@@ -42,6 +42,7 @@ CODE_LABELS = {
     "UNREADABLE": "File could not be read",
     "MISSING_FIELD": "Required value missing",
     "EVIDENCE_MISSING": "Value not found on the page",
+    "MODEL_READ": "Read by a model",
     "PO_MISSING": "No purchase order on invoice",
     "PO_NOT_FOUND": "Purchase order not found",
     "AMBIGUOUS_PO": "Purchase order needs confirming",

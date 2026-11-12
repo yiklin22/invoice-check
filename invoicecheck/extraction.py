@@ -100,7 +100,9 @@ def unreadable(reason: str, pages: list[str] | None = None) -> ExtractedInvoice:
     return ExtractedInvoice(readable=False, reason=reason, page_texts=tuple(pages or ()))
 
 
-def extract_invoice(pdf: bytes) -> ExtractedInvoice:
+def extract_invoice(pdf: bytes, model_reader=None) -> ExtractedInvoice:
+    """`model_reader(pages) -> ExtractedInvoice`, when given, is tried on a
+    file that has text but that no supplier template can read."""
     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
         tmp.write(pdf)
         tmp.flush()
@@ -116,6 +118,8 @@ def extract_invoice(pdf: bytes) -> ExtractedInvoice:
             log.exception("invoice2data failed")
             return unreadable(f"Template extraction failed ({type(exc).__name__}).", pages)
     if not data:
+        if model_reader is not None:
+            return model_reader(pages)
         return unreadable("No supplier template matched, or a required field "
                           "(number, date, total) was not found.", pages)
 

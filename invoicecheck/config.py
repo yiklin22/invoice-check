@@ -21,6 +21,14 @@ MAX_STORAGE_BYTES = _int("MAX_STORAGE_BYTES", 100_000_000)      # PDF bytes stor
 MAX_FILES_PER_DAY = _int("MAX_FILES_PER_DAY", 100)              # new files accepted per UTC day
 MAX_ORDER_LINES = _int("MAX_ORDER_LINES", 5_000)                # purchase-order lines stored at one time
 
+# Model reading of invoices that no supplier template matches. Off unless INVOICECHECK_MODEL_EXTRACTION=1;
+# needs ANTHROPIC_API_KEY in the server's environment. When on, the invoice text is sent to the Anthropic API.
+MODEL_EXTRACTION = os.environ.get("INVOICECHECK_MODEL_EXTRACTION", "") == "1"
+MODEL = os.environ.get("INVOICECHECK_MODEL", "claude-opus-5-5")
+MODEL_EFFORT = os.environ.get("INVOICECHECK_MODEL_EFFORT", "low")
+MODEL_TIMEOUT_SECONDS = _int("MODEL_TIMEOUT_SECONDS", 60)
+MAX_MODEL_CALLS_PER_DAY = _int("MAX_MODEL_CALLS_PER_DAY", 30)   # per account, per UTC day
+
 # Accounts
 MAX_ACCOUNTS = _int("MAX_ACCOUNTS", 25)
 INVITE_CODE = os.environ.get("INVOICECHECK_INVITE_CODE", "")    # when set, signing up needs it
