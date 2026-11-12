@@ -1,0 +1,626 @@
+{
+  "currency": "AUD",
+  "buyer": "Harbourline Facilities Pty Ltd",
+  "invoices": [
+    {
+      "file": "01_clean_northwind.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Northwind Paper Co",
+        "invoice_number": "NP-10432",
+        "invoice_date": "2026-08-03",
+        "po_number": "PO-1001",
+        "subtotal": "2427.00",
+        "tax": "242.70",
+        "total": "2669.70",
+        "lines": [
+          {
+            "sku": "NP-A4-80",
+            "description": "A4 copy paper 80gsm (carton)",
+            "quantity": "40",
+            "unit_price": "52.80",
+            "line_total": "2112.00"
+          },
+          {
+            "sku": "NP-ENV-DL",
+            "description": "DL envelopes (box 500)",
+            "quantity": "10",
+            "unit_price": "31.50",
+            "line_total": "315.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "02_clean_kestrel.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0087",
+        "invoice_date": "2026-08-05",
+        "po_number": "PO-1003",
+        "subtotal": "1278.00",
+        "tax": "127.80",
+        "total": "1405.80",
+        "lines": [
+          {
+            "sku": "KF-M8-50",
+            "description": "M8x50 hex bolt zinc (box 100)",
+            "quantity": "30",
+            "unit_price": "24.40",
+            "line_total": "732.00"
+          },
+          {
+            "sku": "KF-M8-NUT",
+            "description": "M8 hex nut zinc (box 200)",
+            "quantity": "30",
+            "unit_price": "9.90",
+            "line_total": "297.00"
+          },
+          {
+            "sku": "KF-WSH-8",
+            "description": "M8 flat washer (box 500)",
+            "quantity": "60",
+            "unit_price": "4.15",
+            "line_total": "249.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "03_clean_bluegum.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Bluegum Cleaning Supplies",
+        "invoice_number": "BG/5521",
+        "invoice_date": "2026-08-07",
+        "po_number": "PO-1005",
+        "subtotal": "726.60",
+        "tax": "72.66",
+        "total": "799.26",
+        "lines": [
+          {
+            "sku": "BG-DET-5L",
+            "description": "Neutral detergent 5L",
+            "quantity": "24",
+            "unit_price": "17.60",
+            "line_total": "422.40"
+          },
+          {
+            "sku": "BG-MOP-HD",
+            "description": "Mop head heavy duty",
+            "quantity": "36",
+            "unit_price": "8.45",
+            "line_total": "304.20"
+          }
+        ]
+      }
+    },
+    {
+      "file": "04_clean_northwind.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Northwind Paper Co",
+        "invoice_number": "NP-10447",
+        "invoice_date": "2026-08-10",
+        "po_number": "PO-1002",
+        "subtotal": "1493.75",
+        "tax": "149.38",
+        "total": "1643.13",
+        "lines": [
+          {
+            "sku": "NP-A3-80",
+            "description": "A3 copy paper 80gsm (carton)",
+            "quantity": "20",
+            "unit_price": "61.00",
+            "line_total": "1220.00"
+          },
+          {
+            "sku": "NP-LBL-24",
+            "description": "Labels 24-up (pack 100)",
+            "quantity": "15",
+            "unit_price": "18.25",
+            "line_total": "273.75"
+          }
+        ]
+      }
+    },
+    {
+      "file": "05_clean_kestrel_part1.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0092",
+        "invoice_date": "2026-08-06",
+        "po_number": "PO-1004",
+        "subtotal": "541.20",
+        "tax": "54.12",
+        "total": "595.32",
+        "lines": [
+          {
+            "sku": "KF-M10-75",
+            "description": "M10x75 hex bolt zinc (box 50)",
+            "quantity": "6",
+            "unit_price": "41.20",
+            "line_total": "247.20"
+          },
+          {
+            "sku": "KF-ANC-10",
+            "description": "M10 sleeve anchor (box 25)",
+            "quantity": "8",
+            "unit_price": "36.75",
+            "line_total": "294.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "06_clean_bluegum_two_pages.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Bluegum Cleaning Supplies",
+        "invoice_number": "BG/5530",
+        "invoice_date": "2026-08-11",
+        "po_number": "PO-1006",
+        "subtotal": "1197.00",
+        "tax": "119.70",
+        "total": "1316.70",
+        "lines": [
+          {
+            "sku": "BG-GLV-M",
+            "description": "Nitrile gloves M (box 100)",
+            "quantity": "50",
+            "unit_price": "12.30",
+            "line_total": "615.00"
+          },
+          {
+            "sku": "BG-BIN-80",
+            "description": "Bin liners 80L (roll 50)",
+            "quantity": "40",
+            "unit_price": "9.75",
+            "line_total": "390.00"
+          },
+          {
+            "sku": "BG-SPR-750",
+            "description": "Spray bottle 750ml",
+            "quantity": "60",
+            "unit_price": "3.20",
+            "line_total": "192.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "07_clean_kestrel_part2.pdf",
+      "category": "clean",
+      "readable": true,
+      "expected_status": "clean",
+      "expected_codes": [],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0104",
+        "invoice_date": "2026-08-13",
+        "po_number": "PO-1004",
+        "subtotal": "247.20",
+        "tax": "24.72",
+        "total": "271.92",
+        "lines": [
+          {
+            "sku": "KF-M10-75",
+            "description": "M10x75 hex bolt zinc (box 50)",
+            "quantity": "6",
+            "unit_price": "41.20",
+            "line_total": "247.20"
+          }
+        ]
+      }
+    },
+    {
+      "file": "08_ambiguous_po_format.pdf",
+      "category": "ambiguous",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "AMBIGUOUS_PO"
+      ],
+      "expected_fields": {
+        "supplier_name": "Northwind Paper Co",
+        "invoice_number": "NP-10461",
+        "invoice_date": "2026-08-12",
+        "po_number": "PO 1007",
+        "subtotal": "1752.00",
+        "tax": "175.20",
+        "total": "1927.20",
+        "lines": [
+          {
+            "sku": "NP-A4-80",
+            "description": "A4 copy paper 80gsm (carton)",
+            "quantity": "25",
+            "unit_price": "52.80",
+            "line_total": "1320.00"
+          },
+          {
+            "sku": "NP-PAD-A5",
+            "description": "A5 ruled notepad (pack 10)",
+            "quantity": "30",
+            "unit_price": "14.40",
+            "line_total": "432.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "09_duplicate_same_number.pdf",
+      "category": "duplicate",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "DUPLICATE_INVOICE_NUMBER"
+      ],
+      "expected_fields": {
+        "supplier_name": "Bluegum Cleaning Supplies",
+        "invoice_number": "BG/5521",
+        "invoice_date": "2026-08-07",
+        "po_number": "PO-1005",
+        "subtotal": "726.60",
+        "tax": "72.66",
+        "total": "799.26",
+        "lines": [
+          {
+            "sku": "BG-DET-5L",
+            "description": "Neutral detergent 5L",
+            "quantity": "24",
+            "unit_price": "17.60",
+            "line_total": "422.40"
+          },
+          {
+            "sku": "BG-MOP-HD",
+            "description": "Mop head heavy duty",
+            "quantity": "36",
+            "unit_price": "8.45",
+            "line_total": "304.20"
+          }
+        ]
+      }
+    },
+    {
+      "file": "10_duplicate_rebilled.pdf",
+      "category": "duplicate",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "POSSIBLE_DUPLICATE",
+        "QTY_EXCEEDS_PO"
+      ],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0131",
+        "invoice_date": "2026-08-19",
+        "po_number": "PO-1003",
+        "subtotal": "1278.00",
+        "tax": "127.80",
+        "total": "1405.80",
+        "lines": [
+          {
+            "sku": "KF-M8-50",
+            "description": "M8x50 hex bolt zinc (box 100)",
+            "quantity": "30",
+            "unit_price": "24.40",
+            "line_total": "732.00"
+          },
+          {
+            "sku": "KF-M8-NUT",
+            "description": "M8 hex nut zinc (box 200)",
+            "quantity": "30",
+            "unit_price": "9.90",
+            "line_total": "297.00"
+          },
+          {
+            "sku": "KF-WSH-8",
+            "description": "M8 flat washer (box 500)",
+            "quantity": "60",
+            "unit_price": "4.15",
+            "line_total": "249.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "11_price_above_po.pdf",
+      "category": "wrong_price",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "PRICE_MISMATCH"
+      ],
+      "expected_fields": {
+        "supplier_name": "Bluegum Cleaning Supplies",
+        "invoice_number": "BG/5544",
+        "invoice_date": "2026-08-14",
+        "po_number": "PO-1008",
+        "subtotal": "475.20",
+        "tax": "47.52",
+        "total": "522.72",
+        "lines": [
+          {
+            "sku": "BG-DET-5L",
+            "description": "Neutral detergent 5L",
+            "quantity": "12",
+            "unit_price": "19.10",
+            "line_total": "229.20"
+          },
+          {
+            "sku": "BG-GLV-M",
+            "description": "Nitrile gloves M (box 100)",
+            "quantity": "20",
+            "unit_price": "12.30",
+            "line_total": "246.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "12_price_below_po.pdf",
+      "category": "wrong_price",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "PRICE_MISMATCH"
+      ],
+      "expected_fields": {
+        "supplier_name": "Northwind Paper Co",
+        "invoice_number": "NP-10475",
+        "invoice_date": "2026-08-14",
+        "po_number": "PO-1009",
+        "subtotal": "1320.00",
+        "tax": "132.00",
+        "total": "1452.00",
+        "lines": [
+          {
+            "sku": "NP-LBL-24",
+            "description": "Labels 24-up (pack 100)",
+            "quantity": "40",
+            "unit_price": "17.25",
+            "line_total": "690.00"
+          },
+          {
+            "sku": "NP-ENV-DL",
+            "description": "DL envelopes (box 500)",
+            "quantity": "20",
+            "unit_price": "31.50",
+            "line_total": "630.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "13_line_arithmetic.pdf",
+      "category": "wrong_price",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "LINE_ARITHMETIC"
+      ],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0118",
+        "invoice_date": "2026-08-17",
+        "po_number": "PO-1010",
+        "subtotal": "659.20",
+        "tax": "65.92",
+        "total": "725.12",
+        "lines": [
+          {
+            "sku": "KF-M8-50",
+            "description": "M8x50 hex bolt zinc (box 100)",
+            "quantity": "18",
+            "unit_price": "24.40",
+            "line_total": "493.20"
+          },
+          {
+            "sku": "KF-WSH-8",
+            "description": "M8 flat washer (box 500)",
+            "quantity": "40",
+            "unit_price": "4.15",
+            "line_total": "166.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "14_quantity_above_po.pdf",
+      "category": "excess_quantity",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "QTY_EXCEEDS_PO"
+      ],
+      "expected_fields": {
+        "supplier_name": "Bluegum Cleaning Supplies",
+        "invoice_number": "BG/5551",
+        "invoice_date": "2026-08-18",
+        "po_number": "PO-1011",
+        "subtotal": "546.00",
+        "tax": "54.60",
+        "total": "600.60",
+        "lines": [
+          {
+            "sku": "BG-MOP-HD",
+            "description": "Mop head heavy duty",
+            "quantity": "30",
+            "unit_price": "8.45",
+            "line_total": "253.50"
+          },
+          {
+            "sku": "BG-BIN-80",
+            "description": "Bin liners 80L (roll 50)",
+            "quantity": "30",
+            "unit_price": "9.75",
+            "line_total": "292.50"
+          }
+        ]
+      }
+    },
+    {
+      "file": "15_quantity_cumulative.pdf",
+      "category": "excess_quantity",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "QTY_EXCEEDS_PO"
+      ],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0140",
+        "invoice_date": "2026-08-20",
+        "po_number": "PO-1004",
+        "subtotal": "164.80",
+        "tax": "16.48",
+        "total": "181.28",
+        "lines": [
+          {
+            "sku": "KF-M10-75",
+            "description": "M10x75 hex bolt zinc (box 50)",
+            "quantity": "4",
+            "unit_price": "41.20",
+            "line_total": "164.80"
+          }
+        ]
+      }
+    },
+    {
+      "file": "16_order_not_found.pdf",
+      "category": "missing_order",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "PO_NOT_FOUND"
+      ],
+      "expected_fields": {
+        "supplier_name": "Kestrel Fasteners Pty Ltd",
+        "invoice_number": "KF2026-0122",
+        "invoice_date": "2026-08-18",
+        "po_number": "PO-1999",
+        "subtotal": "198.00",
+        "tax": "19.80",
+        "total": "217.80",
+        "lines": [
+          {
+            "sku": "KF-M8-NUT",
+            "description": "M8 hex nut zinc (box 200)",
+            "quantity": "20",
+            "unit_price": "9.90",
+            "line_total": "198.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "17_no_po_on_invoice.pdf",
+      "category": "missing_order",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "PO_MISSING"
+      ],
+      "expected_fields": {
+        "supplier_name": "Bluegum Cleaning Supplies",
+        "invoice_number": "BG/5560",
+        "invoice_date": "2026-08-20",
+        "po_number": null,
+        "subtotal": "329.60",
+        "tax": "32.96",
+        "total": "362.56",
+        "lines": [
+          {
+            "sku": "BG-SPR-750",
+            "description": "Spray bottle 750ml",
+            "quantity": "48",
+            "unit_price": "3.20",
+            "line_total": "153.60"
+          },
+          {
+            "sku": "BG-DET-5L",
+            "description": "Neutral detergent 5L",
+            "quantity": "10",
+            "unit_price": "17.60",
+            "line_total": "176.00"
+          }
+        ]
+      }
+    },
+    {
+      "file": "18_unreadable_scan.pdf",
+      "category": "unreadable",
+      "readable": false,
+      "expected_status": "unreadable",
+      "expected_codes": [
+        "UNREADABLE"
+      ],
+      "expected_fields": null
+    },
+    {
+      "file": "19_unreadable_truncated.pdf",
+      "category": "unreadable",
+      "readable": false,
+      "expected_status": "unreadable",
+      "expected_codes": [
+        "UNREADABLE"
+      ],
+      "expected_fields": null
+    },
+    {
+      "file": "20_sku_not_ordered_total_wrong.pdf",
+      "category": "wrong_total",
+      "readable": true,
+      "expected_status": "needs_review",
+      "expected_codes": [
+        "SKU_NOT_ON_PO",
+        "TOTAL_MISMATCH"
+      ],
+      "expected_fields": {
+        "supplier_name": "Northwind Paper Co",
+        "invoice_number": "NP-10492",
+        "invoice_date": "2026-08-24",
+        "po_number": "PO-1013",
+        "subtotal": "788.00",
+        "tax": "78.80",
+        "total": "876.80",
+        "lines": [
+          {
+            "sku": "NP-A3-80",
+            "description": "A3 copy paper 80gsm (carton)",
+            "quantity": "10",
+            "unit_price": "61.00",
+            "line_total": "610.00"
+          },
+          {
+            "sku": "NP-TNR-BK",
+            "description": "Toner cartridge black",
+            "quantity": "2",
+            "unit_price": "89.00",
+            "line_total": "178.00"
+          }
+        ]
+      }
+    }
+  ]
+}

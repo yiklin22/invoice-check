@@ -1,0 +1,29 @@
+po_number,supplier,line_no,sku,description,quantity,unit_price
+PO-1001,Northwind Paper Co,1,NP-A4-80,A4 copy paper 80gsm (carton),40,52.80
+PO-1001,Northwind Paper Co,2,NP-ENV-DL,DL envelopes (box 500),10,31.50
+PO-1002,Northwind Paper Co,1,NP-A3-80,A3 copy paper 80gsm (carton),20,61.00
+PO-1002,Northwind Paper Co,2,NP-LBL-24,Labels 24-up (pack 100),15,18.25
+PO-1003,Kestrel Fasteners Pty Ltd,1,KF-M8-50,M8x50 hex bolt zinc (box 100),30,24.40
+PO-1003,Kestrel Fasteners Pty Ltd,2,KF-M8-NUT,M8 hex nut zinc (box 200),30,9.90
+PO-1003,Kestrel Fasteners Pty Ltd,3,KF-WSH-8,M8 flat washer (box 500),60,4.15
+PO-1004,Kestrel Fasteners Pty Ltd,1,KF-M10-75,M10x75 hex bolt zinc (box 50),12,41.20
+PO-1004,Kestrel Fasteners Pty Ltd,2,KF-ANC-10,M10 sleeve anchor (box 25),8,36.75
+PO-1005,Bluegum Cleaning Supplies,1,BG-DET-5L,Neutral detergent 5L,24,17.60
+PO-1005,Bluegum Cleaning Supplies,2,BG-MOP-HD,Mop head heavy duty,36,8.45
+PO-1006,Bluegum Cleaning Supplies,1,BG-GLV-M,Nitrile gloves M (box 100),50,12.30
+PO-1006,Bluegum Cleaning Supplies,2,BG-BIN-80,Bin liners 80L (roll 50),40,9.75
+PO-1006,Bluegum Cleaning Supplies,3,BG-SPR-750,Spray bottle 750ml,60,3.20
+PO-1007,Northwind Paper Co,1,NP-A4-80,A4 copy paper 80gsm (carton),25,52.80
+PO-1007,Northwind Paper Co,2,NP-PAD-A5,A5 ruled notepad (pack 10),30,14.40
+PO-1008,Bluegum Cleaning Supplies,1,BG-DET-5L,Neutral detergent 5L,12,17.60
+PO-1008,Bluegum Cleaning Supplies,2,BG-GLV-M,Nitrile gloves M (box 100),20,12.30
+PO-1009,Northwind Paper Co,1,NP-LBL-24,Labels 24-up (pack 100),40,18.25
+PO-1009,Northwind Paper Co,2,NP-ENV-DL,DL envelopes (box 500),20,31.50
+PO-1010,Kestrel Fasteners Pty Ltd,1,KF-M8-50,M8x50 hex bolt zinc (box 100),18,24.40
+PO-1010,Kestrel Fasteners Pty Ltd,2,KF-WSH-8,M8 flat washer (box 500),40,4.15
+PO-1011,Bluegum Cleaning Supplies,1,BG-MOP-HD,Mop head heavy duty,24,8.45
+PO-1011,Bluegum Cleaning Supplies,2,BG-BIN-80,Bin liners 80L (roll 50),30,9.75
+PO-1012,Bluegum Cleaning Supplies,1,BG-SPR-750,Spray bottle 750ml,48,3.20
+PO-1012,Bluegum Cleaning Supplies,2,BG-DET-5L,Neutral detergent 5L,10,17.60
+PO-1013,Northwind Paper Co,1,NP-A3-80,A3 copy paper 80gsm (carton),10,61.00
+PO-1013,Northwind Paper Co,2,NP-PAD-A5,A5 ruled notepad (pack 10),20,14.40
