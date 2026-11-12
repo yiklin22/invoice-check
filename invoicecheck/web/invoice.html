@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ inv.filename }} - Invoice check{% endblock %}
+{% macro cite(ev) %}
+  {% if ev and ev.located %}<a class="cite" href="#p{{ ev.page }}l{{ ev.page_line }}" title="{{ ev.line_text }}">page {{ ev.page }}, line {{ ev.page_line }}</a>
+  {% elif ev and ev.method.startswith("manual") %}<span class="cite manual">typed by {{ ev.method[7:] }}</span>
+  {% elif ev %}<span class="cite missing">not found on a page</span>
+  {% else %}<span class="cite missing">no evidence</span>{% endif %}
+{% endmacro %}
+{% block main %}
+<p class="crumb"><a href="/">Invoices</a> / {{ inv.filename }}</p>
+<div class="titlebar">
+  <h1>{{ inv.supplier_name or "Unreadable file" }}{% if inv.invoice_number %} - {{ inv.invoice_number }}{% endif %}</h1>
+  <span class="badge st-{{ inv.status }}">{{ status_labels[inv.status] }}</span>
+</div>
+{% if inv.unreadable_reason and inv.status == "unreadable" %}
+<p class="flash err"><b>This file could not be read.</b> {{ inv.unreadable_reason }} It is not counted as checked. Type the values in from the document on the left, or reject it.</p>
+{% endif %}
+
+<div class="split">
+<section class="pane" aria-label="Document">
+  <h2>Document</h2>
+  <iframe class="pdf" src="/invoices/{{ inv.id }}/pdf" title="Uploaded PDF"></iframe>
+  <h2>Text as read{% if inv.extraction_method %} <small>({{ inv.extraction_method }})</small>{% endif %}</h2>
+  {% for p in pages %}
+  <h3>Page {{ p.no }}</h3>
+  <ul class="pagetext">
+    {% for ln in p.lines %}<li id="p{{ p.no }}l{{ ln.no }}" class="{{ 'cited' if ln.tags }}"><code>{{ ln.text }}</code>{% for t in ln.tags %}<span class="tag">{{ t }}</span>{% endfor %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="empty">No text could be read from this file.</p>{% endfor %}
+</section>
+
+<section class="pane" aria-label="Review">
+  <h2>Findings{% if impact %} <small>{{ money(impact) }} {{ inv.currency or "" }} in question</small>{% endif %}</h2>
+  {% for d in inv.discrepancies %}
+  <article class="issue sev-{{ d.severity }} {{ d.state }}">
+    <header><b>{{ code_labels.get(d.code, d.code) }}</b> <span class="badge">{{ d.state }}</span></header>
+    <p>{{ d.message }}</p>
+    {% if d.expected or d.actual %}<p class="hint">Expected: {{ d.expected or "-" }} &middot; Invoice says: {{ d.actual or "-" }}{% if d.impact %} &middot; Amount: {{ money(d.impact) }}{% endif %}</p>{% endif %}
+    {% if can_decide and d.code != "UNREADABLE" %}
+    <form method="post" action="/invoices/{{ inv.id }}/discrepancies" class="row">
+      <input type="hidden" name="fingerprint" value="{{ d.fingerprint }}">
+      {% if d.state == "open" %}
+      <input name="note" placeholder="Reason (needed to accept)" aria-label="Reason" maxlength="500">
+      <button name="action" value="accept">Accept</button>
+      <button name="action" value="dispute">Dispute</button>
+      {% else %}<button name="action" value="reopen">Undo decision</button>{% endif %}
+    </form>
+    {% endif %}
+  </article>
+  {% else %}<p class="empty">No discrepancies found.</p>{% endfor %}
+
+  <h2>Extracted values</h2>
+  <form method="post" action="/invoices/{{ inv.id }}/edit">
+    <div class="fields">
+      {% for f in fields %}
+      <label for="f-{{ f.name }}">{{ f.label }}</label>
+      <input id="f-{{ f.name }}" name="{{ f.name }}" value="{{ f.value if f.value is not none else '' }}"{% if f.name == "invoice_date" %} placeholder="YYYY-MM-DD"{% endif %}>
+      {{ cite(f.evidence) }}
+      {% endfor %}
+    </div>
+    <div class="scroll">
+    <table class="lines">
+      <thead><tr><th>#</th><th>SKU</th><th>Description</th><th>Qty</th><th>Unit price</th><th>Line total</th><th>Source</th><th>Remove</th></tr></thead>
+      <tbody>
+      {% for ln in lines %}{% set r = ln.row %}
+      <tr>
+        <td>{{ r.line_no }}</td>
+        <td><input name="line-{{ r.line_no }}-sku" value="{{ r.sku or '' }}" aria-label="SKU line {{ r.line_no }}"></td>
+        <td><input name="line-{{ r.line_no }}-description" value="{{ r.description or '' }}" aria-label="Description line {{ r.line_no }}"></td>
+        <td><input class="n" name="line-{{ r.line_no }}-quantity" value="{{ show(r.quantity) }}" aria-label="Quantity line {{ r.line_no }}"></td>
+        <td><input class="n" name="line-{{ r.line_no }}-unit_price" value="{{ money(r.unit_price) }}" aria-label="Unit price line {{ r.line_no }}"></td>
+        <td><input class="n" name="line-{{ r.line_no }}-line_total" value="{{ money(r.line_total) }}" aria-label="Line total line {{ r.line_no }}"></td>
+        <td>{{ cite(ln.evidence) }}{% if ln.edited %}<span class="cite manual">edited</span>{% endif %}</td>
+        <td><input type="checkbox" name="line-{{ r.line_no }}-delete" value="1" aria-label="Remove line {{ r.line_no }}"></td>
+      </tr>
+      {% endfor %}
+      {% for k in range(2 if lines else 3) %}
+      <tr class="new">
+        <td>new</td>
+        <td><input name="line-new{{ k }}-sku" aria-label="SKU new line"></td>
+        <td><input name="line-new{{ k }}-description" aria-label="Description new line"></td>
+        <td><input class="n" name="line-new{{ k }}-quantity" aria-label="Quantity new line"></td>
+        <td><input class="n" name="line-new{{ k }}-unit_price" aria-label="Unit price new line"></td>
+        <td><input class="n" name="line-new{{ k }}-line_total" aria-label="Line total new line"></td>
+        <td></td><td></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="row">
+      <input name="note" placeholder="Why are you changing these values? (optional)" aria-label="Edit note" maxlength="500">
+      <button class="primary">Save corrections and re-check</button>
+    </div>
+    <p class="hint">Saving a correction marks the invoice as edited. An edited invoice is never passed automatically, and an earlier approval is withdrawn.</p>
+  </form>
+
+  <h2>Decision</h2>
+  <form method="post" action="/invoices/{{ inv.id }}/decision" class="row">
+    <input name="note" placeholder="Note (needed to reject)" aria-label="Decision note" maxlength="500">
+    {% if can_reopen %}<button name="action" value="reopen">Reopen</button>{% else %}
+    <button class="primary" name="action" value="approve"{% if not can_approve %} disabled title="Read the file and settle every finding first"{% endif %}>Approve</button>
+    <button name="action" value="reject">Reject</button>{% endif %}
+  </form>
+  {% if not can_approve and not can_reopen %}<p class="hint">{% if inv.status == "unreadable" %}An unreadable file cannot be approved.{% else %}{{ undecided }} finding(s) must be accepted before approval.{% endif %}</p>{% endif %}
+  <form method="post" action="/invoices/{{ inv.id }}/delete" onsubmit="return confirm('Delete this file and everything derived from it?');">
+    <button class="danger">Delete this file</button>
+  </form>
+
+  <h2>History</h2>
+  {% if inv.decisions %}
+  <ul class="log">
+    {% for d in inv.decisions|reverse %}
+    <li><time>{{ d.created_at.strftime("%Y-%m-%d %H:%M") }}</time> <b>{{ d.reviewer }}</b> {{ d.action.replace("_", " ") }}{% if d.field %}: {{ d.field }} {{ d.old_value or "(empty)" }} &rarr; {{ d.new_value or "(empty)" }}{% endif %}{% if d.fingerprint %} [{{ code_labels.get(d.fingerprint.split(":")[0], d.fingerprint) }}]{% endif %}{% if d.note %} - {{ d.note }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="empty">No reviewer actions yet.</p>{% endif %}
+</section>
+</div>
+{% endblock %}

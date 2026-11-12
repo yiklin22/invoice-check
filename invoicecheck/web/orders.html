@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Purchase orders - Invoice check{% endblock %}
+{% block main %}
+<h1>Purchase orders</h1>
+{% if import_errors %}<ul class="flash err">{% for e in import_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+<form class="card inline" method="post" action="/orders/import" enctype="multipart/form-data">
+  <label for="pofile">Import CSV with columns po_number, supplier, line_no, sku, description, quantity, unit_price</label>
+  <input id="pofile" type="file" name="file" accept=".csv,text/csv" required>
+  <button>Import orders</button>
+</form>
+{% if orders %}
+<div class="scroll">
+<table>
+  <thead><tr><th>Order</th><th>Supplier</th><th>Line</th><th>SKU</th><th>Description</th><th class="num">Quantity</th><th class="num">Unit price</th></tr></thead>
+  <tbody>
+  {% for po in orders %}{% for ln in po.lines %}
+  <tr>
+    <td>{{ po.po_number if loop.first }}</td><td>{{ po.supplier_name if loop.first }}</td>
+    <td>{{ ln.line_no }}</td><td>{{ ln.sku }}</td><td>{{ ln.description }}</td>
+    <td class="num">{{ show(ln.quantity) }}</td><td class="num">{{ money(ln.unit_price) }}</td>
+  </tr>
+  {% endfor %}{% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}<p class="empty">No purchase orders loaded yet.</p>{% endif %}
+{% endblock %}

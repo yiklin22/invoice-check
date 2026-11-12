@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="cards">
+  <form class="card" method="post" action="/upload" enctype="multipart/form-data">
+    <h2>Upload invoices</h2>
+    <p class="hint">PDF files, up to {{ max_mb }} MB each. A file you already uploaded is not added twice.</p>
+    <input type="file" name="files" accept="application/pdf,.pdf" multiple required>
+    <button class="primary">Upload and check</button>
+  </form>
+  <form class="card" method="post" action="/orders/import" enctype="multipart/form-data">
+    <h2>Purchase orders</h2>
+    <p class="hint">{{ orders }} order(s) loaded. Import a CSV to add or update orders.</p>
+    <input type="file" name="file" accept=".csv,text/csv" required>
+    <button>Import orders</button>
+  </form>
+</section>
+
+<nav class="chips" aria-label="Filter by status">
+  <a class="chip {{ 'on' if not current }}" href="/">All <b>{{ total }}</b></a>
+  {% for key, label in status_labels.items() %}{% if counts.get(key) %}
+  <a class="chip st-{{ key }} {{ 'on' if current == key }}" href="/?status={{ key }}">{{ label }} <b>{{ counts[key] }}</b></a>
+  {% endif %}{% endfor %}
+</nav>
+
+{% if invoices %}
+<div class="scroll">
+<table>
+  <thead><tr><th>File</th><th>Supplier</th><th>Invoice</th><th>Date</th><th>Order</th><th class="num">Total</th><th>Status</th><th>Findings</th></tr></thead>
+  <tbody>
+  {% for inv in invoices %}
+  <tr>
+    <td><a href="/invoices/{{ inv.id }}">{{ inv.filename }}</a></td>
+    <td>{{ inv.supplier_name or "" }}</td>
+    <td>{{ inv.invoice_number or "" }}</td>
+    <td>{{ inv.invoice_date or "" }}</td>
+    <td>{{ inv.po_number or "" }}</td>
+    <td class="num">{{ money(inv.total) }}</td>
+    <td><span class="badge st-{{ inv.status }}">{{ status_labels[inv.status] }}</span></td>
+    <td>{% for d in inv.discrepancies %}<span class="finding {{ d.state }}" title="{{ d.message }}">{{ code_labels.get(d.code, d.code) }}</span>{% endfor %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">No invoices{{ " with this status" if current }} yet. Import your purchase orders, then upload invoice PDFs.</p>
+{% endif %}
+{% endblock %}
