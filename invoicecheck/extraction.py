@@ -100,9 +100,11 @@ def unreadable(reason: str, pages: list[str] | None = None) -> ExtractedInvoice:
     return ExtractedInvoice(readable=False, reason=reason, page_texts=tuple(pages or ()))
 
 
-def extract_invoice(pdf: bytes, model_reader=None) -> ExtractedInvoice:
+def extract_invoice(pdf: bytes, model_reader=None, scan_reader=None, max_scan_pages: int = 5) -> ExtractedInvoice:
     """`model_reader(pages) -> ExtractedInvoice`, when given, is tried on a
-    file that has text but that no supplier template can read."""
+    file that has text but that no supplier template can read.
+    `scan_reader(pdf) -> ExtractedInvoice`, when given, is tried on a file
+    with no text layer and at most `max_scan_pages` pages."""
     with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
         tmp.write(pdf)
         tmp.flush()
@@ -111,7 +113,12 @@ def extract_invoice(pdf: bytes, model_reader=None) -> ExtractedInvoice:
         except Exception as exc:  # pdfminer raises many unrelated types on bad files
             return unreadable(f"The file could not be parsed as a PDF ({type(exc).__name__}).")
         if sum(len(re.sub(r"\s", "", p)) for p in pages) < MIN_TEXT_CHARS:
-            return unreadable("The PDF has no text layer. It is probably a scan or a photo.", pages)
+            if scan_reader is None:
+                return unreadable("The PDF has no text layer. It is probably a scan or a photo.", pages)
+            if not 0 < len(pages) <= max_scan_pages:
+                return unreadable(f"The PDF has no text layer and {len(pages)} pages. Scans of more than "
+                                  f"{max_scan_pages} pages are not sent to the model.", pages)
+            return scan_reader(pdf)
         try:
             data = extract_data(tmp.name, templates=templates(), input_module="pdfminer")
         except Exception as exc:

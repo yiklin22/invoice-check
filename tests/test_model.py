@@ -1,5 +1,6 @@
-"""The model fallback for invoices no template can read, tested with a stand-in client.
+"""The model fallback for invoices no template can read and for scans, tested with a stand-in client.
 No test calls a real model."""
+import base64
 import io
 from datetime import date
 from decimal import Decimal
@@ -14,6 +15,7 @@ from sqlalchemy import select
 from conftest import ACC, fixture_files
 from invoicecheck import config, model, service
 from invoicecheck.extraction import extract_invoice
+from invoicecheck.matching import REQUIRED
 from invoicecheck.models import Invoice, UsageCounter
 
 PRINTED = ["Acme Unknown Trading", "Tax invoice INV-77", "Date: 03/11/2026", "PO: PO-9999",
@@ -161,3 +163,70 @@ def test_a_failed_call_and_the_daily_cap_both_leave_the_file_unreadable(session,
     second = process(session, [("acme-copy.pdf", pdf() + b"\n%copy")])[-1]
     assert second.status == "unreadable" and "template" in second.unreadable_reason
     assert len(client.calls) == 1 and calls_today(session) == 1
+
+
+# --- scans: no text layer, so nothing the model reads can be checked by code ------------
+
+SCAN = "18_unreadable_scan.pdf"          # a page that is only a picture of an invoice
+
+
+def picture_pdf(pages: int) -> bytes:
+    """Pages with a drawing and no text."""
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf)
+    for _ in range(pages):
+        c.rect(50, 50, 200, 200)
+        c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
+def test_a_scan_is_sent_as_a_pdf_and_its_values_are_kept_but_marked_unverified():
+    client = FakeClient()
+    got = model.ModelReader(client=client, model="m").read_scan(b"%PDF-scan")
+    call = client.calls[0]
+    document = call["messages"][0]["content"][0]
+    assert document["type"] == "document" and document["source"]["media_type"] == "application/pdf"
+    assert base64.b64decode(document["source"]["data"]) == b"%PDF-scan"
+    assert "scanned pages" in call["system"] and "<page>" not in call["system"]
+    assert got.readable and got.method == "model-scan:m" and got.page_texts == ()
+    assert got.total == Decimal("55.00") and got.po_number == "PO-9999" and len(got.lines) == 1
+    assert got.evidence and not any(e.located for e in got.evidence)
+
+
+def test_a_scan_read_by_the_model_needs_every_value_accepted_by_a_person(session, monkeypatch):
+    client = FakeClient()
+    use_model(monkeypatch, client)
+    inv, = process(session, fixture_files({SCAN}))
+    assert len(client.calls) == 1 and calls_today(session) == 1
+    assert inv.extraction_method == f"model-scan:{config.MODEL}" and inv.status == "needs_review"
+    codes = [d.code for d in inv.discrepancies]
+    assert codes.count("EVIDENCE_MISSING") == len(REQUIRED) + 1            # each required value, and the one line
+    assert "from a scan" in next(d.message for d in inv.discrepancies if d.code == "MODEL_READ")
+    with pytest.raises(service.ReviewError):
+        service.decide_invoice(session, ACC, inv.id, "approve", "ana")
+
+
+def test_a_scan_stays_unreadable_with_the_model_off(session, monkeypatch):
+    monkeypatch.setattr(model, "ModelReader", lambda: pytest.fail("the model was used"))
+    inv, = process(session, fixture_files({SCAN}))
+    assert inv.status == "unreadable" and "no text layer" in inv.unreadable_reason
+
+
+def test_a_long_scan_is_not_sent_to_the_model(session, monkeypatch):
+    client = FakeClient()
+    use_model(monkeypatch, client)
+    inv, = process(session, [("long.pdf", picture_pdf(config.MAX_SCAN_PAGES + 1))])
+    assert inv.status == "unreadable" and "are not sent to the model" in inv.unreadable_reason
+    assert client.calls == [] and calls_today(session) == 0
+
+
+@pytest.mark.parametrize("client,reason", [
+    (FakeClient(stop_reason="refusal"), "The PDF has no text layer, and the model reading stopped early"),
+    (FakeClient(reading=GOOD.model_copy(update={"is_invoice": False})), "did not find an invoice in the scan"),
+    (FakeClient(reading=GOOD.model_copy(update={"invoice_number": "", "total": ""})), "could not read an invoice number"),
+], ids=["refusal", "not an invoice", "nothing legible"])
+def test_a_scan_the_model_cannot_read_is_unreadable_with_the_reason(session, monkeypatch, client, reason):
+    use_model(monkeypatch, client)
+    inv, = process(session, [("picture.pdf", picture_pdf(1))])
+    assert inv.status == "unreadable" and reason in inv.unreadable_reason and calls_today(session) == 1

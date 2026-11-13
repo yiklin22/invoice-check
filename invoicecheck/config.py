@@ -28,6 +28,7 @@ MODEL = os.environ.get("INVOICECHECK_MODEL", "claude-opus-5-5")
 MODEL_EFFORT = os.environ.get("INVOICECHECK_MODEL_EFFORT", "low")
 MODEL_TIMEOUT_SECONDS = _int("MODEL_TIMEOUT_SECONDS", 60)
 MAX_MODEL_CALLS_PER_DAY = _int("MAX_MODEL_CALLS_PER_DAY", 30)   # per account, per UTC day
+MAX_SCAN_PAGES = _int("MAX_SCAN_PAGES", 5)                     # a longer scan is not sent to the model
 
 # Accounts
 MAX_ACCOUNTS = _int("MAX_ACCOUNTS", 25)

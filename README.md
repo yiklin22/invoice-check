@@ -11,8 +11,8 @@ of scope.
 and milestone 8 added login, per-account data, deletion, upload limits and
 usage caps. It runs on this machine only: it is not hosted anywhere, and no
 real invoice and no real user has touched it yet. Milestone 9 added a model
-fallback for invoices no template reads; it is off by default, and a pilot
-on 13 November 2026 read six of the synthetic invoices correctly.** See [The model step](#the-model-step) and
+fallback for invoices no template reads, and milestone 10 lets it read scans;
+both are off by default and have only read synthetic invoices.** See [The model step](#the-model-step) and
 [What this does not show](#what-this-does-not-show).
 
 ## Result on the fixture set
@@ -31,7 +31,7 @@ condition. Output of `scripts/demo.py` against a running server
 | Line total is not quantity x price | 1 | `LINE_ARITHMETIC` |
 | Quantity above the order (one invoice / across three invoices) | 2 | `QTY_EXCEEDS_PO` |
 | Order number not in the list / no order number | 2 | `PO_NOT_FOUND`, `PO_MISSING` |
-| Scanned image with no text / truncated file | 2 | `unreadable`, with the reason |
+| Scanned image with no text / truncated file | 2 | `unreadable`, with the reason (the scan is read when the model step is on) |
 | Item not ordered, and total does not add up | 1 | `SKU_NOT_ON_PO`, `TOTAL_MISMATCH` |
 
 20 of 20 cases came out as seeded, with no extra findings. Uploading the same
@@ -53,7 +53,7 @@ Needs [uv](https://docs.astral.sh/uv/). No database install is needed: without
 uv sync
 uv run uvicorn invoicecheck.app:app --port 8811      # open http://127.0.0.1:8811 and create an account
 uv run python scripts/demo.py http://127.0.0.1:8811  # in a second terminal: two throwaway accounts, deleted at the end
-uv run pytest                                        # 125 tests, on a real PostgreSQL
+uv run pytest                                        # 132 tests, on a real PostgreSQL
 ```
 
 To try it by hand, create an account and press **Load the sample data** on the
@@ -177,7 +177,7 @@ Things I had to work around:
 
 ## The model step
 
-**Run against the real model once, on invented invoices only.** The 14 tests
+**Run against the real model on invented invoices only.** The 21 tests
 in `tests/test_model.py` use a stand-in client that returns fixed output. The
 pilot below was run on 13 November 2026 with `claude-opus-5-5` at low effort:
 all six fixture invoices were read as the manifest says, and every value was
@@ -198,6 +198,19 @@ shows the step works end to end, not how it does on real supplier invoices.
   characters into `Decimal`; dates are read day-first or not at all.
 - **Never clean on its own.** An invoice read by the model always carries a
   "Read by a model" finding, so a person has to accept it before approval.
+- **Scans.** A PDF with no text layer and at most five pages
+  (`MAX_SCAN_PAGES`) is sent to the model as the PDF itself. There is no text
+  to look the values up in, so code checks nothing about a scan: every value
+  is kept, every one is a "could not be located on a page" finding, and the
+  "Read by a model" finding says it came from a scan. A person accepts each
+  one after comparing it with the page shown beside it. A longer scan, or one
+  the model finds no invoice number or total on, stays unreadable.
+- **Checked through the app on 13 November 2026.** With the model on, the
+  scanned fixture (a picture of an invoice, tilted 1.2 degrees) was read with
+  every value right: it matched its purchase order with no price, quantity
+  or total finding, for an estimated $0.016. A text invoice in a layout with
+  no template was read with every value found on the page, for $0.008. That
+  is one clean computer-drawn scan, not a phone photo or a faxed page.
 - **When it fails.** A refusal, a timeout, an API error or a cut-off answer
   leaves the file unreadable, with the reason. Calls are capped per account
   per day (`MAX_MODEL_CALLS_PER_DAY`, 30); past the cap the file is
@@ -241,8 +254,9 @@ Versions are pinned in `uv.lock`. Licenses are from each package's metadata.
 
 - **Real documents.** Every invoice is synthetic, with a clean text layer and
   a layout I chose. Real supplier invoices need a template each or the
-  model fallback, which has only read six of these synthetic invoices. Scans have no
-  text layer and stay unreadable: the fallback reads text, not images.
+  model fallback, which has only read a handful of these synthetic invoices.
+  The one scan it has read is a clean rendered image; crooked photos, stamps,
+  handwriting and faint print are untested.
 - **Real users.** Nobody but me has used the screens. Correction counts and
   completion times do not exist yet.
 - **A hosted deployment.** Everything ran on one machine over plain HTTP.
@@ -291,9 +305,8 @@ address and the HTTPS scheme are the visitor's, not the proxy's.
 1. Put it on a host with HTTPS and an invite code. This needs a choice of
    host and a PostgreSQL there; nothing in the code depends on which.
 2. Password reset and email verification, which need a way to send email.
-3. Run the model pilot with an API key, then try the fallback on real
-   invoices from a supplier that has no template. Scans would need the PDF
-   itself sent to the model, which is not built.
+3. Try the model fallback on real invoices from a supplier that has no
+   template, and on real scans and phone photos.
 4. Three operators completing a real task, measuring corrections and time.
 
 ## Layout
@@ -313,5 +326,5 @@ invoicecheck/
 fixtures/         generate.py, 20 PDFs, purchase_orders.csv, manifest.json
 scripts/demo.py   drives a running server through the whole flow with two accounts
 scripts/model_pilot.py   reads six fixtures with the real model; spends money, has a limit
-tests/            125 tests
+tests/            132 tests
 ```

@@ -221,12 +221,17 @@ def process_queued(session: Session) -> int:
     queued = session.scalars(select(Invoice).where(Invoice.status == QUEUED).order_by(Invoice.id)
                              .with_for_update(skip_locked=True)).all()
     for inv in queued:
-        reader = None
+        reader = scan_reader = None
         if model.enabled() and _used_today(session, inv.account_id, "model_calls") < config.MAX_MODEL_CALLS_PER_DAY:
             def reader(pages, account_id=inv.account_id):
                 _add_usage(session, account_id, "model_calls", 1)   # counted before the call: a failed call can cost too
                 return model.ModelReader().read(pages)
-        result = extract_invoice(inv.pdf, model_reader=reader)
+
+            def scan_reader(pdf, account_id=inv.account_id):
+                _add_usage(session, account_id, "model_calls", 1)
+                return model.ModelReader().read_scan(pdf)
+        result = extract_invoice(inv.pdf, model_reader=reader, scan_reader=scan_reader,
+                                 max_scan_pages=config.MAX_SCAN_PAGES)
         inv.page_texts = list(result.page_texts)
         if not result.readable:
             inv.status, inv.unreadable_reason = UNREADABLE, result.reason
@@ -280,6 +285,10 @@ def _evidence_findings(inv: Invoice) -> list[Finding]:
         out.append(Finding(code="MODEL_READ", severity="low", key="-",
                            message="Read by a model, not by a supplier template. "
                                    "Check every field against the document before accepting."))
+    if (inv.extraction_method or "").startswith("model-scan:"):
+        out.append(Finding(code="MODEL_READ", severity="medium", key="-",
+                           message="Read by a model from a scan. Nothing could be checked against text, so "
+                                   "compare every value with the picture of the page before accepting."))
     return out
 
 
