@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 .pgdata/
 .env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
