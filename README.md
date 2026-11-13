@@ -11,8 +11,8 @@ of scope.
 and milestone 8 added login, per-account data, deletion, upload limits and
 usage caps. It runs on this machine only: it is not hosted anywhere, and no
 real invoice and no real user has touched it yet. Milestone 9 added a model
-fallback for invoices no template reads; it is off by default and no real
-model call has been made.** See [The model step](#the-model-step) and
+fallback for invoices no template reads; it is off by default, and a pilot
+on 13 November 2026 read six of the synthetic invoices correctly.** See [The model step](#the-model-step) and
 [What this does not show](#what-this-does-not-show).
 
 ## Result on the fixture set
@@ -177,9 +177,12 @@ Things I had to work around:
 
 ## The model step
 
-**Not yet run against a real model.** The 14 tests in `tests/test_model.py`
-use a stand-in client that returns fixed output. The request has never been
-sent to the API, so its exact shape is unconfirmed until the pilot below runs.
+**Run against the real model once, on invented invoices only.** The 14 tests
+in `tests/test_model.py` use a stand-in client that returns fixed output. The
+pilot below was run on 13 November 2026 with `claude-opus-5-5` at low effort:
+all six fixture invoices were read as the manifest says, and every value was
+found on the page. These are layouts the templates already read, so this
+shows the step works end to end, not how it does on real supplier invoices.
 
 - **When it is used.** Only for a PDF that has text but that no supplier
   template can read, and only with `INVOICECHECK_MODEL_EXTRACTION=1` and
@@ -199,9 +202,12 @@ sent to the API, so its exact shape is unconfirmed until the pilot below runs.
   leaves the file unreadable, with the reason. Calls are capped per account
   per day (`MAX_MODEL_CALLS_PER_DAY`, 30); past the cap the file is
   unreadable as before.
-- **What it costs.** Not measured. `scripts/model_pilot.py` reads six fixture
-  invoices with the model instead of the templates, prints tokens and
-  estimated dollars per call, and stops at a spend limit (default $0.50):
+- **What it costs.** In the pilot, about $0.010 per one-page invoice (about
+  1,440 tokens in and 225 out) and 2 to 8 seconds per call; six invoices came
+  to an estimated $0.061. These are estimates from token counts at list
+  price, not a bill. `scripts/model_pilot.py` reads six fixture invoices with
+  the model instead of the templates, prints tokens and estimated dollars per
+  call, and stops at a spend limit (default $0.50):
 
   ```bash
   echo 'ANTHROPIC_API_KEY=...' > .env               # .env is git-ignored
@@ -235,7 +241,7 @@ Versions are pinned in `uv.lock`. Licenses are from each package's metadata.
 
 - **Real documents.** Every invoice is synthetic, with a clean text layer and
   a layout I chose. Real supplier invoices need a template each or the
-  model fallback, which has not run against a real model. Scans have no
+  model fallback, which has only read six of these synthetic invoices. Scans have no
   text layer and stay unreadable: the fallback reads text, not images.
 - **Real users.** Nobody but me has used the screens. Correction counts and
   completion times do not exist yet.
